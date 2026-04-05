@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>kat</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Jost:wght@100;200;300;400&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- Cursor -->
+  <div id="cursor"></div>
+  <div id="cursorTrail"></div>
+
+  <!-- Capas globales -->
+  <div class="vignette"></div>
+  <div class="film-grain"></div>
+  <div class="letterbox top"></div>
+  <div class="letterbox bottom"></div>
+
+  <!-- Timecode cinematográfico (siempre visible, sutil) -->
+  <div class="timecode" id="timecode">00:00:00:00</div>
+
+  <!-- SVG Filters -->
+  <svg style="position:absolute;width:0;height:0;overflow:hidden" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="f-glitch" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="1"
+                      result="noise" seed="2">
+          <animate attributeName="baseFrequency" values="0.05;0.08;0.03;0.05"
+                   dur="0.3s" begin="indefinite" id="glitchAnim"/>
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R"
+                           yChannelSelector="G" result="disp">
+          <animate attributeName="scale" values="0;18;0" dur="0.3s"
+                   begin="glitchAnim.begin" fill="freeze"/>
+        </feDisplacementMap>
+      </filter>
+      <filter id="f-blur-heavy">
+        <feGaussianBlur stdDeviation="12"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- ══════════════════════════════════════════════════════════
+       ESCENA 0 — NEGRO TOTAL + SONIDO DE CÁMARA
+       (automática, 0.8s antes de que el usuario vea algo)
+  ══════════════════════════════════════════════════════════ -->
+  <!-- No tiene DOM propio: es la pantalla en negro con body -->
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ESCENA 1 — OBERTURA: "esto parece sobre fotografía"
+  ══════════════════════════════════════════════════════════ -->
+  <section id="scene-overture" class="screen active">
+    <div class="overture-content">
+
+      <!-- Líneas que parecen hablar de fotografía en general -->
+      <div class="ov-lines">
+        <p class="ov-line" id="ovl1">
+          <span class="li">Hay personas que saben mirar.</span>
+        </p>
+        <p class="ov-line" id="ovl2">
+          <span class="li">Que ven lo que los demás dejan pasar.</span>
+        </p>
+        <p class="ov-line" id="ovl3">
+          <span class="li">Que tienen la extraña habilidad</span>
+        </p>
+        <p class="ov-line" id="ovl4">
+          <span class="li">de detener el tiempo.</span>
+        </p>
+      </div>
+
+      <!-- Pausa. Luego el giro: "creías que hablábamos de ti como fotógrafa" -->
+      <div class="ov-twist" id="ovTwist">
+        <p class="ov-twist-text" id="ovTwistText"></p>
+      </div>
+
+      <button class="cta-btn ghost" id="enterBtn" onclick="goToScene2()">
+        <span class="btn-shimmer"></span>
+        <span class="btn-text">ver lo que encontré</span>
+      </button>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ESCENA 2 — EL ARCHIVO: "alguien ha estado capturando momentos de ti"
+       Pantalla tipo "explorador de archivos" antiguo de cámara
+  ══════════════════════════════════════════════════════════ -->
+  <section id="scene-archive" class="screen">
+    <div class="archive-ui">
+      <div class="archive-header">
+        <span class="archive-label">ARCHIVO RECUPERADO</span>
+        <span class="archive-date" id="archiveDate">——</span>
+      </div>
+
+      <!-- Pantalla tipo cámara digital mostrando thumbnails -->
+      <div class="archive-screen">
+        <div class="archive-top-bar">
+          <span class="arch-icon">▶ PLAY</span>
+          <span class="arch-count" id="archCount">5 archivos encontrados</span>
+          <span class="arch-battery">▪▪▪▪ 100%</span>
+        </div>
+
+        <!-- Grid de thumbnails borrosos que se irán revelando -->
+        <div class="thumb-grid" id="thumbGrid">
+          <!-- Generado por JS -->
+        </div>
+
+        <div class="archive-bottom-bar">
+          <span class="arch-filename" id="archFilename">DSCF_0001.RAF</span>
+          <span class="arch-size">RAW · 24.2 MB</span>
+        </div>
+      </div>
+
+      <p class="archive-caption" id="archiveCaption"></p>
+
+      <button class="cta-btn" id="archiveBtn" onclick="goToScene3()" style="opacity:0">
+        <span class="btn-shimmer"></span>
+        <span class="btn-text">abrir el primero</span>
+      </button>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ESCENA 3 — POLAROIDS: los momentos de ella, vistos por otros
+  ══════════════════════════════════════════════════════════ -->
+  <section id="scene-memories" class="screen">
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- Overlay de "visor de cámara" sutil -->
+    <div class="viewfinder-overlay">
+      <div class="vf-corner tl"></div>
+      <div class="vf-corner tr"></div>
+      <div class="vf-corner bl"></div>
+      <div class="vf-corner br"></div>
+      <div class="vf-crosshair-h"></div>
+      <div class="vf-crosshair-v"></div>
+    </div>
+
+    <div class="polaroid-stage" id="polaroidStage"></div>
+
+    <div class="memory-controls">
+      <button class="capture-btn" id="nextMemoryBtn" onclick="showNextMemory()">
+        <span class="capture-ring outer"></span>
+        <span class="capture-ring inner"></span>
+        <span class="capture-dot"></span>
+        <span class="capture-label">siguiente</span>
+      </button>
+      <div class="memory-progress">
+        <div class="memory-progress-fill" id="memProgressFill"></div>
+      </div>
+      <p class="memory-counter" id="memCounter">I · V</p>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ESCENA 4 — RUPTURA: el tiempo se quiebra
+       "Alguien encontró algo que no debería existir"
+  ══════════════════════════════════════════════════════════ -->
+  <section id="scene-break" class="screen">
+    <!-- Glitch visual intenso -->
+    <div class="break-glitch-layer" id="glitchLayer"></div>
+    <div class="break-content">
+      <div class="break-static" id="breakStatic"></div>
+      <p class="break-line" id="brkL1">.</p>
+      <p class="break-line bold" id="brkL2">espera.</p>
+      <p class="break-line" id="brkL3">esto no debería estar aquí.</p>
+      <p class="break-line dim" id="brkL4">hay un archivo más.</p>
+      <p class="break-line dim" id="brkL5">uno que no estaba en el rollo.</p>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ESCENA 5 — EL ÚLTIMO ARCHIVO: la cuarta pared se rompe
+       "El archivo eres tú"
+  ══════════════════════════════════════════════════════════ -->
+  <section id="scene-reveal" class="screen">
+    <div class="reveal-bg-glow"></div>
+
+    <!-- Polaroid final: muy grande, centrado -->
+    <div class="reveal-polaroid-wrap">
+      <div class="reveal-polaroid" id="revealPolaroid">
+        <div class="reveal-light-leak"></div>
+        <div class="reveal-img-wrap" id="revealImgWrap">
+          <div class="polaroid-reveal-overlay"></div>
+          <!-- ✏️ EDITA: foto más especial/íntima -->
+          <img src="especial.jpeg"
+               onerror="this.parentElement.classList.add('no-img')"
+               alt="Tú"
+               class="polaroid-img" id="revealImg"/>
+          <div class="img-placeholder-text">📷 especial.jpeg</div>
+        </div>
+        <div class="reveal-caption-wrap">
+          <p class="reveal-caption-text" id="revealCaption"></p>
+          <span class="caption-cursor" id="captionCursor">|</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- El giro: "tú no tomas fotos. eres la foto." -->
+    <div class="reveal-declaration" id="revealDeclaration">
+      <p id="rdL1">No eres quien detiene el tiempo.</p>
+      <p id="rdL2" class="bold-declaration">Eres el momento que nadie quiere que pase.</p>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ESCENA 6 — FINAL: declaración emocional
+       No es "feliz cumpleaños". Es algo más.
+  ══════════════════════════════════════════════════════════ -->
+  <section id="scene-final" class="screen">
+    <canvas id="finalCanvas"></canvas>
+    <div class="final-warm-glow"></div>
+
+    <div class="final-block">
+      <!-- Respiración larga antes de mostrar -->
+      <div class="golden-line" id="gl-top"></div>
+
+      <!-- La declaración principal: no genérica -->
+      <p class="final-declaration" id="fdecl1">Hoy no es solo tu cumpleaños.</p>
+      <p class="final-declaration italic" id="fdecl2">Es el día en que el mundo cumple un año más contigo en él.</p>
+
+      <div class="golden-line" id="gl-mid"></div>
+
+      <!-- Nombre: enorme, con glow -->
+      <h1 class="final-name" id="finalName">katli</h1><!-- ✏️ -->
+
+      <div class="golden-line" id="gl-bot"></div>
+
+      <!-- La firma: íntima, no cliché -->
+      <p class="final-signature" id="finalSig">
+        gracias por existir en voz alta.
+      </p>
+      <p class="final-from" id="finalFrom">· esta experiencia fue hecha para ti, solo para ti ·</p>
+
+      <!-- Easter egg: número de rollo -->
+      <p class="easter-roll">rollo nº ∞ · exposición perfecta</p>
+    </div>
+  </section>
+
+
+  <!-- Flash overlay -->
+  <div id="flashOverlay"><div id="flashBloom"></div></div>
+  <!-- Freeze overlay -->
+  <div id="freezeOverlay"></div>
+  <!-- Blackout para transiciones pesadas -->
+  <div id="blackout"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
